@@ -14,7 +14,6 @@ lib-cov
 pids
 logs
 results
-dist
 # test coverage files
 .coverage/
 
@@ -22,3 +21,4 @@ node_modules
 npm-debug.log
 
 template/**/*.js
+/package-lock.json
