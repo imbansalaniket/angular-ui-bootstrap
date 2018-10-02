@@ -2,7 +2,7 @@
  * angular-ui-bootstrap
  * http://angular-ui.github.io/bootstrap/
 
- * Version: 2.1.4-p1 - 2018-09-19
+ * Version: 2.1.4-p2 - 2018-10-02
  * License: MIT
  */angular.module("ui.bootstrap", ["ui.bootstrap.collapse","ui.bootstrap.tabindex","ui.bootstrap.accordion","ui.bootstrap.alert","ui.bootstrap.buttons","ui.bootstrap.carousel","ui.bootstrap.dateparser","ui.bootstrap.isClass","ui.bootstrap.datepicker","ui.bootstrap.position","ui.bootstrap.datepickerPopup","ui.bootstrap.debounce","ui.bootstrap.dropdown","ui.bootstrap.stackedMap","ui.bootstrap.modal","ui.bootstrap.paging","ui.bootstrap.pager","ui.bootstrap.pagination","ui.bootstrap.tooltip","ui.bootstrap.popover","ui.bootstrap.progressbar","ui.bootstrap.rating","ui.bootstrap.tabs","ui.bootstrap.timepicker","ui.bootstrap.typeahead"]);
 angular.module('ui.bootstrap.collapse', [])
@@ -3724,6 +3724,26 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
         element.addClass(attrs.windowTopClass || '');
         scope.size = attrs.size;
 
+        // Avoid backdrop to be closed during operations of text selections, with the mouseup
+        // event finishing on the backdrop.
+        var selectionChangeEvtCounts = 0;
+        function selChange() {
+          selectionChangeEvtCounts++;
+        }
+        function selReset() {
+          selectionChangeEvtCounts = 0;
+        }
+
+        if (noBackdropCloseDuringTextSelection) {
+          $(document).on("selectionchange", selChange);
+          $(document).on('mousedown', selReset);
+  
+          scope.$on("$destroy", function() {
+            $(document).off("selectionchange", selChange);
+            $(document).off('mousedown', selReset);
+          });
+        }
+
         scope.close = function(evt) {
           var modal = $modalStack.getTop();
           if (modal && modal.value.backdrop &&
@@ -3736,7 +3756,11 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
         };
 
         // moved from template to fix issue #2280
-        element.on('click', scope.close);
+        element.on('click', function(evt) {
+          if (selectionChangeEvtCounts === 0) {
+            scope.close(evt); 
+          } 
+        });
 
         // This property is only added to the scope for the purpose of detecting when this directive is rendered.
         // We can detect that by using this property in the template associated with this directive and then use
