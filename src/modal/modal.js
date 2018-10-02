@@ -154,6 +154,8 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
           selectionChangeEvtCounts = 0;
         }
 
+        // TODO: flag to disable it
+        var noBackdropCloseDuringTextSelection = true;
         if (noBackdropCloseDuringTextSelection) {
           $(document).on("selectionchange", selChange);
           $(document).on('mousedown', selReset);
