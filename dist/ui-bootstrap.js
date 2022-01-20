@@ -2,7 +2,7 @@
  * angular-ui-bootstrap
  * http://angular-ui.github.io/bootstrap/
 
- * Version: 2.1.4-p2d1 - 2018-10-02
+ * Version: 2.1.4-p2d2 - 2022-01-20
  * License: MIT
  */angular.module("ui.bootstrap", ["ui.bootstrap.collapse","ui.bootstrap.tabindex","ui.bootstrap.accordion","ui.bootstrap.alert","ui.bootstrap.buttons","ui.bootstrap.carousel","ui.bootstrap.dateparser","ui.bootstrap.isClass","ui.bootstrap.datepicker","ui.bootstrap.position","ui.bootstrap.datepickerPopup","ui.bootstrap.debounce","ui.bootstrap.dropdown","ui.bootstrap.stackedMap","ui.bootstrap.modal","ui.bootstrap.paging","ui.bootstrap.pager","ui.bootstrap.pagination","ui.bootstrap.tooltip","ui.bootstrap.popover","ui.bootstrap.progressbar","ui.bootstrap.rating","ui.bootstrap.tabs","ui.bootstrap.timepicker","ui.bootstrap.typeahead"]);
 angular.module('ui.bootstrap.collapse', [])
@@ -3724,28 +3724,6 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
         element.addClass(attrs.windowTopClass || '');
         scope.size = attrs.size;
 
-        // Avoid backdrop to be closed during operations of text selections, with the mouseup
-        // event finishing on the backdrop.
-        var selectionChangeEvtCounts = 0;
-        function selChange() {
-          selectionChangeEvtCounts++;
-        }
-        function selReset() {
-          selectionChangeEvtCounts = 0;
-        }
-
-        // TODO: flag to disable it
-        var noBackdropCloseDuringTextSelection = true;
-        if (noBackdropCloseDuringTextSelection) {
-          $(document).on("selectionchange", selChange);
-          $(document).on('mousedown', selReset);
-  
-          scope.$on("$destroy", function() {
-            $(document).off("selectionchange", selChange);
-            $(document).off('mousedown', selReset);
-          });
-        }
-
         scope.close = function(evt) {
           var modal = $modalStack.getTop();
           if (modal && modal.value.backdrop &&
@@ -3757,12 +3735,20 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
           }
         };
 
+        // exposed this event handler in scope for users to attach if they consider the whole screen (including the backdrop area) as modal content.
+        // used mouse down and mouseup to prevent dialog close when mouse down happens inside the content and mouseup happens on the backdrop.
+        scope.handleMousedown = function(evt1) {        
+          $(evt1.currentTarget).one('mouseup', function(evt2) {
+            if (evt1.target === evt2.target) {
+              scope.close.apply(this, arguments);
+            }
+          });
+        };
+
+        
         // moved from template to fix issue #2280
-        element.on('click', function(evt) {
-          if (selectionChangeEvtCounts === 0) {
-            scope.close(evt); 
-          } 
-        });
+        // Used approach mentioned in this pull request https://github.com/angular-ui/bootstrap/pull/5911/files
+        element.on('mousedown', scope.handleMousedown);
 
         // This property is only added to the scope for the purpose of detecting when this directive is rendered.
         // We can detect that by using this property in the template associated with this directive and then use
