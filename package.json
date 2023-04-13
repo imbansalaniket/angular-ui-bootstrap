@@ -1,6 +1,6 @@
 {
   "author": "https://github.com/angular-ui/bootstrap/graphs/contributors",
-  "name": "angular-ui-bootstrap",
+  "name": "@ionweb/angular-ui-bootstrap",
   "version": "2.5.4",
   "description": "Native AngularJS (Angular) directives for Bootstrap",
   "homepage": "http://angular-ui.github.io/bootstrap/",
