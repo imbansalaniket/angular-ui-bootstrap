@@ -2,7 +2,7 @@
  * angular-ui-bootstrap
  * http://angular-ui.github.io/bootstrap/
 
- * Version: 2.1.4-p2d2 - 2022-06-29
+ * Version: 2.1.4-p2d3 - 2024-09-25
  * License: MIT
  */angular.module("ui.bootstrap", ["ui.bootstrap.collapse","ui.bootstrap.tabindex","ui.bootstrap.accordion","ui.bootstrap.alert","ui.bootstrap.buttons","ui.bootstrap.carousel","ui.bootstrap.dateparser","ui.bootstrap.isClass","ui.bootstrap.datepicker","ui.bootstrap.position","ui.bootstrap.datepickerPopup","ui.bootstrap.debounce","ui.bootstrap.dropdown","ui.bootstrap.stackedMap","ui.bootstrap.modal","ui.bootstrap.paging","ui.bootstrap.pager","ui.bootstrap.pagination","ui.bootstrap.tooltip","ui.bootstrap.popover","ui.bootstrap.progressbar","ui.bootstrap.rating","ui.bootstrap.tabs","ui.bootstrap.timepicker","ui.bootstrap.typeahead"]);
 angular.module('ui.bootstrap.collapse', [])
@@ -3892,6 +3892,12 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
       });
 
       function removeModalWindow(modalInstance, elementToReceiveFocus) {
+
+        if (modalInstance.subtreeModificationObserver) {
+          modalInstance.subtreeModificationObserver.disconnect();
+          delete modalInstance.subtreeModificationObserver;
+        }
+
         var modalWindow = openedWindows.get(modalInstance).value;
         var appendToElement = modalWindow.appendTo;
 
@@ -4190,6 +4196,16 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
         var modalWindow = openedWindows.get(modalInstance);
         if (modalWindow) {
           modalWindow.value.renderDeferred.resolve();
+          modalInstance.subtreeModificationObserver = new MutationObserver(function () {
+            const modal = openedWindows.top();
+            if (modal) {
+              if (modal.focusableElements) {
+                delete modal.focusableElements;
+              }
+            }
+          }
+          );
+          modalInstance.subtreeModificationObserver.observe(modalWindow.value.modalDomEl[0], {subtree: true, childList: true, attributes: true});
         }
       };
 
@@ -4221,27 +4237,51 @@ angular.module('ui.bootstrap.modal', ['ui.bootstrap.stackedMap', 'ui.bootstrap.p
 
       $modalStack.isFocusInFirstItem = function(evt, list) {
         if (list.length > 0) {
-          return (evt.target || evt.srcElement) === list[0];
+          const target = evt.target && evt.target.shadowRoot ? evt.target.shadowRoot.activeElement : evt.target;
+          const srcElement = evt.srcElement && evt.srcElement.shadowRoot ? evt.srcElement.shadowRoot.activeElement: evt.srcElement;
+          return (target || srcElement) === list[0];
         }
         return false;
       };
 
       $modalStack.isFocusInLastItem = function(evt, list) {
         if (list.length > 0) {
-          return (evt.target || evt.srcElement) === list[list.length - 1];
+          const target = evt.target && evt.target.shadowRoot ? evt.target.shadowRoot.activeElement : evt.target;
+          const srcElement = evt.srcElement && evt.srcElement.shadowRoot ? evt.srcElement.shadowRoot.activeElement: evt.srcElement;
+          return (target || srcElement) === list[list.length - 1];
         }
         return false;
       };
 
+      function getTabbableElements(modalDomEl) {
+        const tabbableElements = [];
+        Array.from(modalDomEl.querySelectorAll('*')).forEach( function (el) {
+          if (el.shadowRoot) {
+            const tabbableElementsInsideShadowRoot = getTabbableElements(el.shadowRoot);
+            tabbableElementsInsideShadowRoot.forEach(function (elem) {
+              tabbableElements.push(elem);
+            });
+          } else if (el.matches(tabbableSelector)) {
+            tabbableElements.push(el);
+          }
+        });
+        return tabbableElements;
+      }
+
       $modalStack.loadFocusElementList = function(modalWindow) {
         if (modalWindow) {
+          if (modalWindow.focusableElements) {
+            return modalWindow.focusableElements;
+          }
           var modalDomE1 = modalWindow.value.modalDomEl;
           if (modalDomE1 && modalDomE1.length) {
-            var elements = modalDomE1[0].querySelectorAll(tabbableSelector);
-            return elements ?
+            var elements = getTabbableElements(modalDomE1[0]);
+            const focusableElements = elements ?
               Array.prototype.filter.call(elements, function(element) {
                 return isVisible(element);
               }) : elements;
+            modalWindow.focusableElements = focusableElements;
+            return focusableElements;
           }
         }
       };
